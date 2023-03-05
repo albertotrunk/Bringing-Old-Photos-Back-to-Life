@@ -213,8 +213,7 @@ class BaseOptions:
         return opt
 
     def print_options(self, opt):
-        message = ""
-        message += "----------------- Options ---------------\n"
+        message = "" + "----------------- Options ---------------\n"
         for k, v in sorted(vars(opt).items()):
             comment = ""
             default = self.parser.get_default(k)
@@ -228,12 +227,11 @@ class BaseOptions:
         expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
         if makedir:
             util.mkdirs(expr_dir)
-        file_name = os.path.join(expr_dir, "opt")
-        return file_name
+        return os.path.join(expr_dir, "opt")
 
     def save_options(self, opt):
         file_name = self.option_file_path(opt, makedir=True)
-        with open(file_name + ".txt", "wt") as opt_file:
+        with open(f"{file_name}.txt", "wt") as opt_file:
             for k, v in sorted(vars(opt).items()):
                 comment = ""
                 default = self.parser.get_default(k)
@@ -241,7 +239,7 @@ class BaseOptions:
                     comment = "\t[default: %s]" % str(default)
                 opt_file.write("{:>25}: {:<30}{}\n".format(str(k), str(v), comment))
 
-        with open(file_name + ".pkl", "wb") as opt_file:
+        with open(f"{file_name}.pkl", "wb") as opt_file:
             pickle.dump(opt, opt_file)
 
     def update_options_from_file(self, parser, opt):
@@ -254,8 +252,7 @@ class BaseOptions:
 
     def load_options(self, opt):
         file_name = self.option_file_path(opt, makedir=False)
-        new_opt = pickle.load(open(file_name + ".pkl", "rb"))
-        return new_opt
+        return pickle.load(open(f"{file_name}.pkl", "rb"))
 
     def parse(self, save=False):
 
@@ -281,14 +278,17 @@ class BaseOptions:
             if int_id >= 0:
                 opt.gpu_ids.append(int_id)
 
-        if len(opt.gpu_ids) > 0:
+        if opt.gpu_ids:
             print("The main GPU is ")
             print(opt.gpu_ids[0])
             torch.cuda.set_device(opt.gpu_ids[0])
 
         assert (
-            len(opt.gpu_ids) == 0 or opt.batchSize % len(opt.gpu_ids) == 0
-        ), "Batch size %d is wrong. It must be a multiple of # GPUs %d." % (opt.batchSize, len(opt.gpu_ids))
+            not opt.gpu_ids or opt.batchSize % len(opt.gpu_ids) == 0
+        ), "Batch size %d is wrong. It must be a multiple of # GPUs %d." % (
+            opt.batchSize,
+            len(opt.gpu_ids),
+        )
 
         self.opt = opt
         return self.opt

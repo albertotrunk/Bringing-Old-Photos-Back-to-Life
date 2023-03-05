@@ -44,31 +44,31 @@ class BaseModel(torch.nn.Module):
 
     # helper saving function that can be used by subclasses
     def save_network(self, network, network_label, epoch_label, gpu_ids):
-        save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
+        save_filename = f"{epoch_label}_net_{network_label}.pth"
         save_path = os.path.join(self.save_dir, save_filename)
         torch.save(network.cpu().state_dict(), save_path)
         if len(gpu_ids) and torch.cuda.is_available():
             network.cuda()
 
     def save_optimizer(self, optimizer, optimizer_label, epoch_label):
-        save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
+        save_filename = f"{epoch_label}_optimizer_{optimizer_label}.pth"
         save_path = os.path.join(self.save_dir, save_filename)
         torch.save(optimizer.state_dict(), save_path)
 
     def load_optimizer(self, optimizer, optimizer_label, epoch_label, save_dir=""):
-        save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
+        save_filename = f"{epoch_label}_optimizer_{optimizer_label}.pth"
         if not save_dir:
             save_dir = self.save_dir
         save_path = os.path.join(save_dir, save_filename)
 
         if not os.path.isfile(save_path):
-            print("%s not exists yet!" % save_path)
+            print(f"{save_path} not exists yet!")
         else:
             optimizer.load_state_dict(torch.load(save_path))
 
     # helper loading function that can be used by subclasses
     def load_network(self, network, network_label, epoch_label, save_dir=""):
-        save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
+        save_filename = f"{epoch_label}_net_{network_label}.pth"
         if not save_dir:
             save_dir = self.save_dir
 
@@ -76,9 +76,9 @@ class BaseModel(torch.nn.Module):
         # print(self.save_dir)
         save_path = os.path.join(save_dir, save_filename)
         if not os.path.isfile(save_path):
-            print("%s not exists yet!" % save_path)
-            # if network_label == 'G':
-            #     raise('Generator must exist!')
+            print(f"{save_path} not exists yet!")
+                # if network_label == 'G':
+                #     raise('Generator must exist!')
         else:
             # network.load_state_dict(torch.load(save_path))
             try:
@@ -92,13 +92,11 @@ class BaseModel(torch.nn.Module):
                     network.load_state_dict(pretrained_dict)
                     # if self.opt.verbose:
                     print(
-                        "Pretrained network %s has excessive layers; Only loading layers that are used"
-                        % network_label
+                        f"Pretrained network {network_label} has excessive layers; Only loading layers that are used"
                     )
                 except:
                     print(
-                        "Pretrained network %s has fewer layers; The following are not initialized:"
-                        % network_label
+                        f"Pretrained network {network_label} has fewer layers; The following are not initialized:"
                     )
                     for k, v in pretrained_dict.items():
                         if v.size() == model_dict[k].size():

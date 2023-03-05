@@ -75,7 +75,7 @@ class FaceTestDataset(BaseDataset):
         cnt = 0
 
         for each_part in self.parts:
-            part_name = img_name + "_" + each_part + ".png"
+            part_name = f"{img_name}_{each_part}.png"
             part_url = os.path.join(self.label_paths, part_name)
 
             if os.path.exists(part_url):
@@ -89,13 +89,11 @@ class FaceTestDataset(BaseDataset):
 
         full_label_tensor = torch.stack(full_label, 0)
 
-        input_dict = {
+        return {
             "label": full_label_tensor,
             "image": image_tensor,
             "path": image_path,
         }
-
-        return input_dict
 
     def __len__(self):
         return self.dataset_size

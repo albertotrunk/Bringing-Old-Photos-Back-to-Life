@@ -21,11 +21,7 @@ def pil_to_np(img_PIL):
     '''
     ar = np.array(img_PIL)
 
-    if len(ar.shape) == 3:
-        ar = ar.transpose(2, 0, 1)
-    else:
-        ar = ar[None, ...]
-
+    ar = ar.transpose(2, 0, 1) if len(ar.shape) == 3 else ar[None, ...]
     return ar.astype(np.float32) / 255.
 
 
@@ -36,11 +32,7 @@ def np_to_pil(img_np):
     '''
     ar = np.clip(img_np * 255, 0, 255).astype(np.uint8)
 
-    if img_np.shape[0] == 1:
-        ar = ar[0]
-    else:
-        ar = ar.transpose(1, 2, 0)
-
+    ar = ar[0] if img_np.shape[0] == 1 else ar.transpose(1, 2, 0)
     return Image.fromarray(ar)
 
 def synthesize_salt_pepper(image,amount,salt_vs_pepper):
@@ -167,8 +159,7 @@ def irregular_hole_synthesize(img,mask):
 
 def zero_mask(size):
     x=np.zeros((size,size,3)).astype('uint8')
-    mask=Image.fromarray(x).convert("RGB")
-    return mask
+    return Image.fromarray(x).convert("RGB")
 
 
 
@@ -186,12 +177,10 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
 
             self.loaded_imgs_L_old=BigFileMemoryLoader(self.load_img_dir_L_old)
             self.loaded_imgs_RGB_old=BigFileMemoryLoader(self.load_img_dir_RGB_old)
-            self.loaded_imgs_clean=BigFileMemoryLoader(self.load_img_dir_clean)
-
         else:
             # self.load_img_dir_clean=os.path.join(self.dir_AB,self.opt.test_dataset)
             self.load_img_dir_clean=os.path.join(self.dir_AB,"VOC_RGB_JPEGImages.bigfile")
-            self.loaded_imgs_clean=BigFileMemoryLoader(self.load_img_dir_clean)
+        self.loaded_imgs_clean=BigFileMemoryLoader(self.load_img_dir_clean)
 
         ####
         print("-------------Filter the imgs whose size <256 in VOC-------------")
@@ -271,9 +260,13 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
         A_tensor = A_transform(A)
 
 
-        input_dict = {'label': A_tensor, 'inst': is_real_old, 'image': A_tensor,
-                        'feat': feat_tensor, 'path': path}
-        return input_dict
+        return {
+            'label': A_tensor,
+            'inst': is_real_old,
+            'image': A_tensor,
+            'feat': feat_tensor,
+            'path': path,
+        }
 
     def __len__(self):
         return len(self.loaded_imgs_clean) ## actually, this is useless, since the selected index is just a random number
@@ -327,13 +320,10 @@ class PairOldPhotos(BaseDataset):
                 img_name_B,B=self.loaded_imgs[index]
                 A=online_add_degradation_v2(B)
                 img_name_A=img_name_B
-                path = os.path.join(self.load_img_dir, img_name_A)
             else:
                 img_name_A,A=self.loaded_imgs[index]
                 img_name_B,B=self.loaded_imgs[index]
-                path = os.path.join(self.load_img_dir, img_name_A)
-
-
+            path = os.path.join(self.load_img_dir, img_name_A)
         if random.uniform(0,1)<0.1 and self.opt.isTrain:
             A=A.convert("L")
             B=B.convert("L")
@@ -363,9 +353,13 @@ class PairOldPhotos(BaseDataset):
         A_tensor = A_transform(A)
         B_tensor = B_transform(B)
 
-        input_dict = {'label': A_tensor, 'inst': inst_tensor, 'image': B_tensor,
-                    'feat': feat_tensor, 'path': path}
-        return input_dict
+        return {
+            'label': A_tensor,
+            'inst': inst_tensor,
+            'image': B_tensor,
+            'feat': feat_tensor,
+            'path': path,
+        }
 
     def __len__(self):
 
@@ -469,9 +463,13 @@ class PairOldPhotos_with_hole(BaseDataset):
         A_tensor = A_transform(A)
         B_tensor = B_transform(B)
 
-        input_dict = {'label': A_tensor, 'inst': mask_tensor[:1], 'image': B_tensor,
-                    'feat': feat_tensor, 'path': path}
-        return input_dict
+        return {
+            'label': A_tensor,
+            'inst': mask_tensor[:1],
+            'image': B_tensor,
+            'feat': feat_tensor,
+            'path': path,
+        }
 
     def __len__(self):
 

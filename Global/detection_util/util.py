@@ -25,7 +25,7 @@ import torchvision.utils as vutils
 def print_options(config_dict):
     print("------------ Options -------------")
     for k, v in sorted(config_dict.items()):
-        print("%s: %s" % (str(k), str(v)))
+        print(f"{str(k)}: {str(v)}")
     print("-------------- End ----------------")
 
 
@@ -36,7 +36,11 @@ def save_options(config_dict):
     mkdir_if_not(file_dir)
     file_name = os.path.join(file_dir, "opt.txt")
     with open(file_name, "wt") as opt_file:
-        opt_file.write(os.path.basename(sys.argv[0]) + " " + strftime("%Y-%m-%d %H:%M:%S", gmtime()) + "\n")
+        opt_file.write(
+            f"{os.path.basename(sys.argv[0])} "
+            + strftime("%Y-%m-%d %H:%M:%S", gmtime())
+            + "\n"
+        )
         opt_file.write("------------ Options -------------\n")
         for k, v in sorted(config_dict.items()):
             opt_file.write("%s: %s\n" % (str(k), str(v)))
@@ -78,11 +82,11 @@ def prepare_device(use_gpu, gpu_ids):
         if isinstance(gpu_ids, str):
             gpu_ids = [int(x) for x in gpu_ids.split(",")]
             torch.cuda.set_device(gpu_ids[0])
-            device = torch.device("cuda:" + str(gpu_ids[0]))
+            device = torch.device(f"cuda:{str(gpu_ids[0])}")
         else:
             torch.cuda.set_device(gpu_ids)
-            device = torch.device("cuda:" + str(gpu_ids))
-        print("running on GPU {}".format(gpu_ids))
+            device = torch.device(f"cuda:{str(gpu_ids)}")
+        print(f"running on GPU {gpu_ids}")
     else:
         device = torch.device("cpu")
         print("running on CPU")
@@ -147,13 +151,9 @@ def prepare_tensorboard(config, experiment_name=datetime.now().strftime("%Y-%m-%
     tensorboard_directory = os.path.join(config.checkpoint_dir, config.name, "tensorboard_logs")
     mkdir_if_not(tensorboard_directory)
     clean_tensorboard(tensorboard_directory)
-    tb_writer = SummaryWriter(os.path.join(tensorboard_directory, experiment_name), flush_secs=10)
-
-    # try:
-    #     shutil.copy('outputs/opt.txt', tensorboard_directory)
-    # except:
-    #     print('cannot find file opt.txt')
-    return tb_writer
+    return SummaryWriter(
+        os.path.join(tensorboard_directory, experiment_name), flush_secs=10
+    )
 
 
 def tb_loss_logger(tb_writer, iter_index, loss_logger):
@@ -166,7 +166,7 @@ def tb_image_logger(tb_writer, iter_index, images_info, config):
     tb_logger_path = os.path.join(config.output_dir, config.name, config.train_mode)
     mkdir_if_not(tb_logger_path)
     for tag, image in images_info.items():
-        if tag == "test_image_prediction" or tag == "image_prediction":
+        if tag in ["test_image_prediction", "image_prediction"]:
             continue
         image = tv.utils.make_grid(image.cpu())
         image = torch.clamp(image, 0, 1)
@@ -178,7 +178,9 @@ def tb_image_logger(tb_writer, iter_index, images_info, config):
 
 def tb_image_logger_test(epoch, iter, images_info, config):
 
-    url = os.path.join(config.output_dir, config.name, config.train_mode, "val_" + str(epoch))
+    url = os.path.join(
+        config.output_dir, config.name, config.train_mode, f"val_{str(epoch)}"
+    )
     if not os.path.exists(url):
         os.makedirs(url)
     scratch_img = images_info["test_scratch_image"].data.cpu()
@@ -192,7 +194,11 @@ def tb_image_logger_test(epoch, iter, images_info, config):
 
     imgs = torch.cat((scratch_img, predict_hard_mask, gt_mask), 0)
     img_grid = vutils.save_image(
-        imgs, os.path.join(url, str(iter) + ".jpg"), nrow=len(scratch_img), padding=0, normalize=True
+        imgs,
+        os.path.join(url, f"{str(iter)}.jpg"),
+        nrow=len(scratch_img),
+        padding=0,
+        normalize=True,
     )
 
 
@@ -221,8 +227,7 @@ def vgg_preprocess(tensor):
     tensor_bgr_ml = tensor_bgr - torch.Tensor([0.40760392, 0.45795686, 0.48501961]).type_as(tensor_bgr).view(
         1, 3, 1, 1
     )
-    tensor_rst = tensor_bgr_ml * 255
-    return tensor_rst
+    return tensor_bgr_ml * 255
 
 
 def torch_vgg_preprocess(tensor):
@@ -231,8 +236,9 @@ def torch_vgg_preprocess(tensor):
     # input and output ranges in [0,1]
     # normalize the tensor with mean and variance
     tensor_mc = tensor - torch.Tensor([0.485, 0.456, 0.406]).type_as(tensor).view(1, 3, 1, 1)
-    tensor_mc_norm = tensor_mc / torch.Tensor([0.229, 0.224, 0.225]).type_as(tensor_mc).view(1, 3, 1, 1)
-    return tensor_mc_norm
+    return tensor_mc / torch.Tensor([0.229, 0.224, 0.225]).type_as(
+        tensor_mc
+    ).view(1, 3, 1, 1)
 
 
 def network_gradient(net, gradient_on=True):

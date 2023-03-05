@@ -30,10 +30,7 @@ def data_transforms(img, method=Image.BILINEAR, scale=False):
     h = int(round(oh / 4) * 4)
     w = int(round(ow / 4) * 4)
 
-    if (h == ph) and (w == pw):
-        return img
-
-    return img.resize((w, h), method)
+    return img if (h == ph) and (w == pw) else img.resize((w, h), method)
 
 
 def data_transforms_rgb_old(img):
@@ -51,9 +48,7 @@ def irregular_hole_synthesize(img, mask):
     mask_np = mask_np / 255
     img_new = img_np * (1 - mask_np) + mask_np * 255
 
-    hole_img = Image.fromarray(img_new.astype("uint8")).convert("RGB")
-
-    return hole_img
+    return Image.fromarray(img_new.astype("uint8")).convert("RGB")
 
 
 def parameter_set(opt):
@@ -102,12 +97,12 @@ if __name__ == "__main__":
     model.initialize(opt)
     model.eval()
 
-    if not os.path.exists(opt.outputs_dir + "/" + "input_image"):
-        os.makedirs(opt.outputs_dir + "/" + "input_image")
-    if not os.path.exists(opt.outputs_dir + "/" + "restored_image"):
-        os.makedirs(opt.outputs_dir + "/" + "restored_image")
-    if not os.path.exists(opt.outputs_dir + "/" + "origin"):
-        os.makedirs(opt.outputs_dir + "/" + "origin")
+    if not os.path.exists(f"{opt.outputs_dir}/input_image"):
+        os.makedirs(f"{opt.outputs_dir}/input_image")
+    if not os.path.exists(f"{opt.outputs_dir}/restored_image"):
+        os.makedirs(f"{opt.outputs_dir}/restored_image")
+    if not os.path.exists(f"{opt.outputs_dir}/origin"):
+        os.makedirs(f"{opt.outputs_dir}/origin")
 
     dataset_size = 0
 
@@ -130,11 +125,11 @@ if __name__ == "__main__":
         input_name = input_loader[i]
         input_file = os.path.join(opt.test_input, input_name)
         if not os.path.isfile(input_file):
-            print("Skipping non-file %s" % input_name)
+            print(f"Skipping non-file {input_name}")
             continue
         input = Image.open(input_file).convert("RGB")
 
-        print("Now you are processing %s" % (input_name))
+        print(f"Now you are processing {input_name}")
 
         if opt.NL_use_mask:
             mask_name = mask_loader[i]
@@ -172,21 +167,21 @@ if __name__ == "__main__":
             continue
 
         if input_name.endswith(".jpg"):
-            input_name = input_name[:-4] + ".png"
+            input_name = f"{input_name[:-4]}.png"
 
         image_grid = vutils.save_image(
             (input + 1.0) / 2.0,
-            opt.outputs_dir + "/input_image/" + input_name,
+            f"{opt.outputs_dir}/input_image/{input_name}",
             nrow=1,
             padding=0,
             normalize=True,
         )
         image_grid = vutils.save_image(
             (generated.data.cpu() + 1.0) / 2.0,
-            opt.outputs_dir + "/restored_image/" + input_name,
+            f"{opt.outputs_dir}/restored_image/{input_name}",
             nrow=1,
             padding=0,
             normalize=True,
         )
 
-        origin.save(opt.outputs_dir + "/origin/" + input_name)
+        origin.save(f"{opt.outputs_dir}/origin/{input_name}")

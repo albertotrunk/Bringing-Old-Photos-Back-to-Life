@@ -44,19 +44,17 @@ class Mapping_Model_with_mask(nn.Module):
             )
             print("You are using NL + Res")
 
-        model = []
-        for i in range(n_blocks):
-            model += [
-                networks.ResnetBlock(
-                    mc,
-                    padding_type=padding_type,
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=opt,
-                    dilation=opt.mapping_net_dilation,
-                )
-            ]
-
+        model = [
+            networks.ResnetBlock(
+                mc,
+                padding_type=padding_type,
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=opt,
+                dilation=opt.mapping_net_dilation,
+            )
+            for _ in range(n_blocks)
+        ]
         for i in range(n_up - 1):
             ic = min(64 * (2 ** (4 - i)), mc)
             oc = min(64 * (2 ** (3 - i)), mc)
@@ -94,7 +92,7 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
             oc = min(tmp_nc * (2 ** (i + 1)), mc)
             model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
 
-        for i in range(2):
+        for _ in range(2):
             model += [
                 networks.ResnetBlock(
                     mc,
@@ -113,56 +111,48 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
         if opt.mapping_exp==1:
             self.NL_scale_1=networks.Patch_Attention_4(mc,mc,8)
 
-        model = []
-        for i in range(2):
-            model += [
-                networks.ResnetBlock(
-                    mc,
-                    padding_type=padding_type,
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=opt,
-                    dilation=opt.mapping_net_dilation,
-                )
-            ]
-
+        model = [
+            networks.ResnetBlock(
+                mc,
+                padding_type=padding_type,
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=opt,
+                dilation=opt.mapping_net_dilation,
+            )
+            for _ in range(2)
+        ]
         self.res_block_1 = nn.Sequential(*model)
 
         if opt.mapping_exp==1:
             self.NL_scale_2=networks.Patch_Attention_4(mc,mc,4)
 
-        model = []
-        for i in range(2):
-            model += [
-                networks.ResnetBlock(
-                    mc,
-                    padding_type=padding_type,
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=opt,
-                    dilation=opt.mapping_net_dilation,
-                )
-            ]
-        
+        model = [
+            networks.ResnetBlock(
+                mc,
+                padding_type=padding_type,
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=opt,
+                dilation=opt.mapping_net_dilation,
+            )
+            for _ in range(2)
+        ]
         self.res_block_2 = nn.Sequential(*model)
-        
+
         if opt.mapping_exp==1:
             self.NL_scale_3=networks.Patch_Attention_4(mc,mc,2)
-        # self.NL_scale_3=networks.Patch_Attention_2(mc,mc,2)
-
-        model = []
-        for i in range(2):
-            model += [
-                networks.ResnetBlock(
-                    mc,
-                    padding_type=padding_type,
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=opt,
-                    dilation=opt.mapping_net_dilation,
-                )
-            ]
-
+        model = [
+            networks.ResnetBlock(
+                mc,
+                padding_type=padding_type,
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=opt,
+                dilation=opt.mapping_net_dilation,
+            )
+            for _ in range(2)
+        ]
         for i in range(n_up - 1):
             ic = min(64 * (2 ** (4 - i)), mc)
             oc = min(64 * (2 ** (3 - i)), mc)
@@ -181,8 +171,7 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
         x4 = self.NL_scale_2(x3,mask)
         x5 = self.res_block_2(x4)
         x6 = self.NL_scale_3(x5,mask)
-        x7 = self.after_NL(x6)
-        return x7
+        return self.after_NL(x6)
 
     def inference_forward(self, input, mask):
         x1 = self.before_NL(input)

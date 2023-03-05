@@ -33,10 +33,7 @@ def calculate_cdf(histogram):
     # Get the cumulative sum of the elements
     cdf = histogram.cumsum()
 
-    # Normalize the cdf
-    normalized_cdf = cdf / float(cdf.max())
-
-    return normalized_cdf
+    return cdf / float(cdf.max())
 
 
 def calculate_lookup(src_cdf, ref_cdf):
@@ -227,9 +224,7 @@ def blur_blending_cv2(im1, im2, mask):
     im = im1 * mask_blur + (1 - mask_blur) * im2
 
     im /= 255.0
-    im = np.clip(im, 0.0, 1.0)
-
-    return im
+    return np.clip(im, 0.0, 1.0)
 
 
 # def Poisson_blending(im1,im2,mask):
@@ -331,7 +326,7 @@ def search(face_landmarks):
     x_right_eye = int((x3 + x4) / 2)
     y_right_eye = int((y3 + y4) / 2)
 
-    results = np.array(
+    return np.array(
         [
             [x_left_eye, y_left_eye],
             [x_right_eye, y_right_eye],
@@ -340,8 +335,6 @@ def search(face_landmarks):
             [x_right_mouth, y_right_mouth],
         ]
     )
-
-    return results
 
 
 if __name__ == "__main__":
@@ -376,7 +369,7 @@ if __name__ == "__main__":
         done = time.time()
 
         if len(faces) == 0:
-            print("Warning: There is no face in %s" % (x))
+            print(f"Warning: There is no face in {x}")
             continue
 
         blended = image
@@ -397,7 +390,7 @@ if __name__ == "__main__":
             cur_face = aligned_face
             if replace_url != "":
 
-                face_name = x[:-4] + "_" + str(face_id + 1) + ".png"
+                face_name = f"{x[:-4]}_{str(face_id + 1)}.png"
                 cur_url = os.path.join(replace_url, face_name)
                 restored_face = Image.open(cur_url).convert("RGB")
                 restored_face = np.array(restored_face)

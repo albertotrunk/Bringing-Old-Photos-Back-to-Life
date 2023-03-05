@@ -49,13 +49,12 @@ class Downsample(nn.Module):
         self.pad = get_pad_layer(pad_type)(self.pad_sizes)
 
     def forward(self, inp):
-        if self.filt_size == 1:
-            if self.pad_off == 0:
-                return inp[:, :, :: self.stride, :: self.stride]
-            else:
-                return self.pad(inp)[:, :, :: self.stride, :: self.stride]
-        else:
+        if self.filt_size != 1:
             return F.conv2d(self.pad(inp), self.filt, stride=self.stride, groups=inp.shape[1])
+        if self.pad_off == 0:
+            return inp[:, :, :: self.stride, :: self.stride]
+        else:
+            return self.pad(inp)[:, :, :: self.stride, :: self.stride]
 
 
 def get_pad_layer(pad_type):
@@ -66,5 +65,5 @@ def get_pad_layer(pad_type):
     elif pad_type == "zero":
         PadLayer = nn.ZeroPad2d
     else:
-        print("Pad type [%s] not recognized" % pad_type)
+        print(f"Pad type [{pad_type}] not recognized")
     return PadLayer

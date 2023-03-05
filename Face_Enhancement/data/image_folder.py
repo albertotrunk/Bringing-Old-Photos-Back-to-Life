@@ -26,7 +26,7 @@ def is_image_file(filename):
 
 
 def make_dataset_rec(dir, images):
-    assert os.path.isdir(dir), "%s is not a valid directory" % dir
+    assert os.path.isdir(dir), f"{dir} is not a valid directory"
 
     for root, dnames, fnames in sorted(os.walk(dir, followlinks=True)):
         for fname in fnames:
@@ -42,13 +42,13 @@ def make_dataset(dir, recursive=False, read_cache=False, write_cache=False):
         possible_filelist = os.path.join(dir, "files.list")
         if os.path.isfile(possible_filelist):
             with open(possible_filelist, "r") as f:
-                images = f.read().splitlines()
-                return images
-
+                return f.read().splitlines()
     if recursive:
         make_dataset_rec(dir, images)
     else:
-        assert os.path.isdir(dir) or os.path.islink(dir), "%s is not a valid directory" % dir
+        assert os.path.isdir(dir) or os.path.islink(
+            dir
+        ), f"{dir} is not a valid directory"
 
         for root, dnames, fnames in sorted(os.walk(dir)):
             for fname in fnames:
@@ -61,7 +61,7 @@ def make_dataset(dir, recursive=False, read_cache=False, write_cache=False):
         with open(filelist_cache, "w") as f:
             for path in images:
                 f.write("%s\n" % path)
-            print("wrote filelist cache at %s" % filelist_cache)
+            print(f"wrote filelist cache at {filelist_cache}")
 
     return images
 
@@ -74,11 +74,12 @@ class ImageFolder(data.Dataset):
     def __init__(self, root, transform=None, return_paths=False, loader=default_loader):
         imgs = make_dataset(root)
         if len(imgs) == 0:
-            raise (
-                RuntimeError(
-                    "Found 0 images in: " + root + "\n"
-                    "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)
+            raise RuntimeError(
+                (
+                    f"Found 0 images in: {root}" + "\n"
+                    "Supported image extensions are: "
                 )
+                + ",".join(IMG_EXTENSIONS)
             )
 
         self.root = root
@@ -92,10 +93,7 @@ class ImageFolder(data.Dataset):
         img = self.loader(path)
         if self.transform is not None:
             img = self.transform(img)
-        if self.return_paths:
-            return img, path
-        else:
-            return img
+        return (img, path) if self.return_paths else img
 
     def __len__(self):
         return len(self.imgs)
