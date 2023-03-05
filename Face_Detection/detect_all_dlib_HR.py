@@ -64,7 +64,7 @@ def search(face_landmarks):
     x_right_eye = int((x3 + x4) / 2)
     y_right_eye = int((y3 + y4) / 2)
 
-    results = np.array(
+    return np.array(
         [
             [x_left_eye, y_left_eye],
             [x_right_eye, y_right_eye],
@@ -73,8 +73,6 @@ def search(face_landmarks):
             [x_right_mouth, y_right_mouth],
         ]
     )
-
-    return results
 
 
 def compute_transformation_matrix(img, landmark, normalize, target_face_scale=1.0):
@@ -161,7 +159,7 @@ if __name__ == "__main__":
         done = time.time()
 
         if len(faces) == 0:
-            print("Warning: There is no face in %s" % (x))
+            print(f"Warning: There is no face in {x}")
             continue
 
         print(len(faces))
@@ -174,8 +172,11 @@ if __name__ == "__main__":
 
                 affine = compute_transformation_matrix(image, current_fl, False, target_face_scale=1.3)
                 aligned_face = warp(image, affine, output_shape=(512, 512, 3))
-                img_name = x[:-4] + "_" + str(face_id + 1)
-                io.imsave(os.path.join(save_url, img_name + ".png"), img_as_ubyte(aligned_face))
+                img_name = f"{x[:-4]}_{str(face_id + 1)}"
+                io.imsave(
+                    os.path.join(save_url, f"{img_name}.png"),
+                    img_as_ubyte(aligned_face),
+                )
 
         count += 1
 

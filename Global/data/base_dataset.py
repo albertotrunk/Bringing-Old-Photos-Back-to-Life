@@ -33,13 +33,9 @@ def get_params(opt, size):
             new_h=opt.loadSize
             new_w = opt.loadSize * w // h
 
-    if opt.resize_or_crop=='crop_only':
-        pass
-
-
     x = random.randint(0, np.maximum(0, new_w - opt.fineSize))
     y = random.randint(0, np.maximum(0, new_h - opt.fineSize))
-    
+
     flip = random.random() > 0.5
     return {'crop_pos': (x, y), 'flip': flip}
 
@@ -55,11 +51,10 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     if 'crop' in opt.resize_or_crop:
         if opt.isTrain:
             transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize)))
+        elif opt.test_random_crop:
+            transform_list.append(transforms.RandomCrop(opt.fineSize))
         else:
-            if opt.test_random_crop:
-                transform_list.append(transforms.RandomCrop(opt.fineSize))
-            else:
-                transform_list.append(transforms.CenterCrop(opt.fineSize))
+            transform_list.append(transforms.CenterCrop(opt.fineSize))
 
     ## when testing, for ablation study, choose center_crop directly.
 
@@ -85,12 +80,10 @@ def normalize():
     return transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
 def __make_power_2(img, base, method=Image.BICUBIC):
-    ow, oh = img.size        
+    ow, oh = img.size
     h = int(round(oh / base) * base)
     w = int(round(ow / base) * base)
-    if (h == oh) and (w == ow):
-        return img
-    return img.resize((w, h), method)
+    return img if (h == oh) and (w == ow) else img.resize((w, h), method)
 
 def __scale_width(img, target_width, method=Image.BICUBIC):
     ow, oh = img.size
@@ -104,11 +97,7 @@ def __crop(img, pos, size):
     ow, oh = img.size
     x1, y1 = pos
     tw = th = size
-    if (ow > tw or oh > th):        
-        return img.crop((x1, y1, x1 + tw, y1 + th))
-    return img
+    return img.crop((x1, y1, x1 + tw, y1 + th)) if (ow > tw or oh > th) else img
 
 def __flip(img, flip):
-    if flip:
-        return img.transpose(Image.FLIP_LEFT_RIGHT)
-    return img
+    return img.transpose(Image.FLIP_LEFT_RIGHT) if flip else img

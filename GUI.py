@@ -110,10 +110,7 @@ def modify(image_filename=None, cv2_frame=None):
         opts.output_folder, "stage_2_detection_output")
     if not os.path.exists(stage_2_output_dir):
         os.makedirs(stage_2_output_dir)
-    stage_2_command = (
-        "python detect_all_dlib.py --url " + stage_2_input_dir +
-        " --save_url " + stage_2_output_dir
-    )
+    stage_2_command = f"python detect_all_dlib.py --url {stage_2_input_dir} --save_url {stage_2_output_dir}"
     run_cmd(stage_2_command)
     print("Finish Stage 2 ...")
     print("\n")

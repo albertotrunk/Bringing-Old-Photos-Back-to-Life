@@ -36,20 +36,17 @@ class SPADEGenerator(BaseNetwork):
         if opt.use_vae:
             # In case of VAE, we will sample from random z vector
             self.fc = nn.Linear(opt.z_dim, 16 * nf * self.sw * self.sh)
+        elif self.opt.no_parsing_map:
+            self.fc = nn.Conv2d(3, 16 * nf, 3, padding=1)
         else:
-            # Otherwise, we make the network deterministic by starting with
-            # downsampled segmentation map instead of random z
-            if self.opt.no_parsing_map:
-                self.fc = nn.Conv2d(3, 16 * nf, 3, padding=1)
-            else:
-                self.fc = nn.Conv2d(self.opt.semantic_nc, 16 * nf, 3, padding=1)
+            self.fc = nn.Conv2d(self.opt.semantic_nc, 16 * nf, 3, padding=1)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "1":
+        if self.opt.injection_layer in ["all", "1"]:
             self.head_0 = SPADEResnetBlock(16 * nf, 16 * nf, opt)
         else:
             self.head_0 = SPADEResnetBlock_non_spade(16 * nf, 16 * nf, opt)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "2":
+        if self.opt.injection_layer in ["all", "2"]:
             self.G_middle_0 = SPADEResnetBlock(16 * nf, 16 * nf, opt)
             self.G_middle_1 = SPADEResnetBlock(16 * nf, 16 * nf, opt)
 
@@ -57,22 +54,22 @@ class SPADEGenerator(BaseNetwork):
             self.G_middle_0 = SPADEResnetBlock_non_spade(16 * nf, 16 * nf, opt)
             self.G_middle_1 = SPADEResnetBlock_non_spade(16 * nf, 16 * nf, opt)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "3":
+        if self.opt.injection_layer in ["all", "3"]:
             self.up_0 = SPADEResnetBlock(16 * nf, 8 * nf, opt)
         else:
             self.up_0 = SPADEResnetBlock_non_spade(16 * nf, 8 * nf, opt)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "4":
+        if self.opt.injection_layer in ["all", "4"]:
             self.up_1 = SPADEResnetBlock(8 * nf, 4 * nf, opt)
         else:
             self.up_1 = SPADEResnetBlock_non_spade(8 * nf, 4 * nf, opt)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "5":
+        if self.opt.injection_layer in ["all", "5"]:
             self.up_2 = SPADEResnetBlock(4 * nf, 2 * nf, opt)
         else:
             self.up_2 = SPADEResnetBlock_non_spade(4 * nf, 2 * nf, opt)
 
-        if self.opt.injection_layer == "all" or self.opt.injection_layer == "6":
+        if self.opt.injection_layer in ["all", "6"]:
             self.up_3 = SPADEResnetBlock(2 * nf, 1 * nf, opt)
         else:
             self.up_3 = SPADEResnetBlock_non_spade(2 * nf, 1 * nf, opt)
@@ -95,7 +92,9 @@ class SPADEGenerator(BaseNetwork):
         elif opt.num_upsampling_layers == "most":
             num_up_layers = 7
         else:
-            raise ValueError("opt.num_upsampling_layers [%s] not recognized" % opt.num_upsampling_layers)
+            raise ValueError(
+                f"opt.num_upsampling_layers [{opt.num_upsampling_layers}] not recognized"
+            )
 
         sw = opt.load_size // (2 ** num_up_layers)
         sh = round(sw / opt.aspect_ratio)
@@ -124,7 +123,7 @@ class SPADEGenerator(BaseNetwork):
         x = self.up(x)
         x = self.G_middle_0(x, seg, degraded_image)
 
-        if self.opt.num_upsampling_layers == "more" or self.opt.num_upsampling_layers == "most":
+        if self.opt.num_upsampling_layers in ["more", "most"]:
             x = self.up(x)
 
         x = self.G_middle_1(x, seg, degraded_image)
@@ -189,7 +188,7 @@ class Pix2PixHDGenerator(BaseNetwork):
 
         # downsample
         mult = 1
-        for i in range(opt.resnet_n_downsample):
+        for _ in range(opt.resnet_n_downsample):
             model += [
                 norm_layer(nn.Conv2d(opt.ngf * mult, opt.ngf * mult * 2, kernel_size=3, stride=2, padding=1)),
                 activation,
@@ -197,7 +196,7 @@ class Pix2PixHDGenerator(BaseNetwork):
             mult *= 2
 
         # resnet blocks
-        for i in range(opt.resnet_n_blocks):
+        for _ in range(opt.resnet_n_blocks):
             model += [
                 ResnetBlock(
                     opt.ngf * mult,
@@ -208,7 +207,7 @@ class Pix2PixHDGenerator(BaseNetwork):
             ]
 
         # upsample
-        for i in range(opt.resnet_n_downsample):
+        for _ in range(opt.resnet_n_downsample):
             nc_in = int(opt.ngf * mult)
             nc_out = int((opt.ngf * mult) / 2)
             model += [

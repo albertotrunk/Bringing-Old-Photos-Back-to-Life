@@ -27,10 +27,7 @@ def data_transforms(img, full_size, method=Image.BICUBIC):
         ow, oh = img.size
         h = int(round(oh / 16) * 16)
         w = int(round(ow / 16) * 16)
-        if (h == oh) and (w == ow):
-            return img
-        return img.resize((w, h), method)
-
+        return img if (h == oh) and (w == ow) else img.resize((w, h), method)
     elif full_size == "scale_256":
         ow, oh = img.size
         pw, ph = ow, oh
@@ -43,9 +40,7 @@ def data_transforms(img, full_size, method=Image.BICUBIC):
 
         h = int(round(oh / 16) * 16)
         w = int(round(ow / 16) * 16)
-        if (h == ph) and (w == pw):
-            return img
-        return img.resize((w, h), method)
+        return img if (h == ph) and (w == pw) else img.resize((w, h), method)
 
 
 def scale_tensor(img_tensor, default_scale=256):
@@ -100,7 +95,7 @@ def main(config):
     model.eval()
 
     ## dataloader and transformation
-    print("directory of testing image: " + config.test_path)
+    print(f"directory of testing image: {config.test_path}")
     imagelist = os.listdir(config.test_path)
     imagelist.sort()
     total_iter = 0
@@ -127,7 +122,7 @@ def main(config):
 
         scratch_file = os.path.join(config.test_path, image_name)
         if not os.path.isfile(scratch_file):
-            print("Skipping non-file %s" % image_name)
+            print(f"Skipping non-file {image_name}")
             continue
         scratch_image = Image.open(scratch_file).convert("RGB")
         w, h = scratch_image.size
@@ -152,15 +147,12 @@ def main(config):
 
         tv.utils.save_image(
             (P >= 0.4).float(),
-            os.path.join(
-                output_dir,
-                image_name[:-4] + ".png",
-            ),
+            os.path.join(output_dir, f"{image_name[:-4]}.png"),
             nrow=1,
             padding=0,
             normalize=True,
         )
-        transformed_image_PIL.save(os.path.join(input_dir, image_name[:-4] + ".png"))
+        transformed_image_PIL.save(os.path.join(input_dir, f"{image_name[:-4]}.png"))
         gc.collect()
         torch.cuda.empty_cache()
 

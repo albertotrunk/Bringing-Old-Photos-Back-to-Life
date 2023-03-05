@@ -40,8 +40,9 @@ class Pix2PixModel(torch.nn.Module):
             g_loss, generated = self.compute_generator_loss(input_semantics, degraded_image, real_image)
             return g_loss, generated
         elif mode == "discriminator":
-            d_loss = self.compute_discriminator_loss(input_semantics, degraded_image, real_image)
-            return d_loss
+            return self.compute_discriminator_loss(
+                input_semantics, degraded_image, real_image
+            )
         elif mode == "encode_only":
             z, mu, logvar = self.encode_z(real_image)
             return mu, logvar
@@ -60,11 +61,7 @@ class Pix2PixModel(torch.nn.Module):
             D_params = list(self.netD.parameters())
 
         beta1, beta2 = opt.beta1, opt.beta2
-        if opt.no_TTUR:
-            G_lr, D_lr = opt.lr, opt.lr
-        else:
-            G_lr, D_lr = opt.lr / 2, opt.lr * 2
-
+        G_lr, D_lr = (opt.lr, opt.lr) if opt.no_TTUR else (opt.lr / 2, opt.lr * 2)
         optimizer_G = torch.optim.Adam(G_params, lr=G_lr, betas=(beta1, beta2))
         optimizer_D = torch.optim.Adam(D_params, lr=D_lr, betas=(beta1, beta2))
 
@@ -155,7 +152,6 @@ class Pix2PixModel(torch.nn.Module):
         return G_losses, fake_image
 
     def compute_discriminator_loss(self, input_semantics, degraded_image, real_image):
-        D_losses = {}
         with torch.no_grad():
             fake_image, _ = self.generate_fake(input_semantics, degraded_image, real_image)
             fake_image = fake_image.detach()
@@ -163,7 +159,9 @@ class Pix2PixModel(torch.nn.Module):
 
         pred_fake, pred_real = self.discriminate(input_semantics, fake_image, real_image)
 
-        D_losses["D_Fake"] = self.criterionGAN(pred_fake, False, for_discriminator=True)
+        D_losses = {
+            "D_Fake": self.criterionGAN(pred_fake, False, for_discriminator=True)
+        }
         D_losses["D_real"] = self.criterionGAN(pred_real, True, for_discriminator=True)
 
         return D_losses

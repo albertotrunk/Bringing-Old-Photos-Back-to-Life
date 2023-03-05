@@ -13,10 +13,10 @@ import torch.nn as nn
 # |imtype|: the desired type of the converted numpy array
 def tensor2im(image_tensor, imtype=np.uint8, normalize=True):
     if isinstance(image_tensor, list):
-        image_numpy = []
-        for i in range(len(image_tensor)):
-            image_numpy.append(tensor2im(image_tensor[i], imtype, normalize))
-        return image_numpy
+        return [
+            tensor2im(image_tensor[i], imtype, normalize)
+            for i in range(len(image_tensor))
+        ]
     image_numpy = image_tensor.cpu().float().numpy()
     if normalize:
         image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0

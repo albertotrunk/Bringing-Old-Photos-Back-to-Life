@@ -33,16 +33,14 @@ def get_norm_layer(norm_type="instance"):
     elif norm_type == "SwitchNorm":
         norm_layer = SwitchNorm2d
     else:
-        raise NotImplementedError("normalization layer [%s] is not found" % norm_type)
+        raise NotImplementedError(f"normalization layer [{norm_type}] is not found")
     return norm_layer
 
 
 def print_network(net):
     if isinstance(net, list):
         net = net[0]
-    num_params = 0
-    for param in net.parameters():
-        num_params += param.numel()
+    num_params = sum(param.numel() for param in net.parameters())
     print(net)
     print("Total number of parameters: %d" % num_params)
 
@@ -311,7 +309,7 @@ class ResnetBlock(nn.Module):
         elif padding_type == "zero":
             p = self.dilation
         else:
-            raise NotImplementedError("padding [%s] is not implemented" % padding_type)
+            raise NotImplementedError(f"padding [{padding_type}] is not implemented")
 
         conv_block += [
             nn.Conv2d(dim, dim, kernel_size=3, padding=p, dilation=self.dilation),
@@ -329,14 +327,13 @@ class ResnetBlock(nn.Module):
         elif padding_type == "zero":
             p = 1
         else:
-            raise NotImplementedError("padding [%s] is not implemented" % padding_type)
+            raise NotImplementedError(f"padding [{padding_type}] is not implemented")
         conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, dilation=1), norm_layer(dim)]
 
         return nn.Sequential(*conv_block)
 
     def forward(self, x):
-        out = x + self.conv_block(x)
-        return out
+        return x + self.conv_block(x)
 
 
 class Encoder(nn.Module):
@@ -392,10 +389,7 @@ class Encoder(nn.Module):
 
 
 def SN(module, mode=True):
-    if mode:
-        return torch.nn.utils.spectral_norm(module)
-
-    return module
+    return torch.nn.utils.spectral_norm(module) if mode else module
 
 
 class NonLocalBlock2D_with_mask_Res(nn.Module):
@@ -444,17 +438,16 @@ class NonLocalBlock2D_with_mask_Res(nn.Module):
         norm_layer = get_norm_layer(norm_type="instance")
         activation = nn.ReLU(True)
 
-        model = []
-        for i in range(3):
-            model += [
-                ResnetBlock(
-                    inter_channels,
-                    padding_type="reflect",
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=None,
-                )
-            ]
+        model = [
+            ResnetBlock(
+                inter_channels,
+                padding_type="reflect",
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=None,
+            )
+            for _ in range(3)
+        ]
         self.res_block = nn.Sequential(*model)
 
     def forward(self, x, mask):  ## The shape of mask is Batch*1*H*W
@@ -535,20 +528,18 @@ class MultiscaleDiscriminator(nn.Module):
             netD = NLayerDiscriminator(input_nc, opt, ndf, n_layers, norm_layer, use_sigmoid, getIntermFeat)
             if getIntermFeat:
                 for j in range(n_layers+2):
-                    setattr(self, 'scale'+str(i)+'_layer'+str(j), getattr(netD, 'model'+str(j)))
+                    setattr(self, f'scale{str(i)}_layer{str(j)}', getattr(netD, f'model{str(j)}'))
             else:
-                setattr(self, 'layer'+str(i), netD.model)
+                setattr(self, f'layer{str(i)}', netD.model)
 
         self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
 
     def singleD_forward(self, model, input):
-        if self.getIntermFeat:
-            result = [input]
-            for i in range(len(model)):
-                result.append(model[i](result[-1]))
-            return result[1:]
-        else:
+        if not self.getIntermFeat:
             return [model(input)]
+        result = [input]
+        result.extend(model[i](result[-1]) for i in range(len(model)))
+        return result[1:]
 
     def forward(self, input):
         num_D = self.num_D
@@ -556,9 +547,12 @@ class MultiscaleDiscriminator(nn.Module):
         input_downsampled = input
         for i in range(num_D):
             if self.getIntermFeat:
-                model = [getattr(self, 'scale'+str(num_D-1-i)+'_layer'+str(j)) for j in range(self.n_layers+2)]
+                model = [
+                    getattr(self, f'scale{str(num_D - 1 - i)}_layer{str(j)}')
+                    for j in range(self.n_layers + 2)
+                ]
             else:
-                model = getattr(self, 'layer'+str(num_D-1-i))
+                model = getattr(self, f'layer{str(num_D - 1 - i)}')
             result.append(self.singleD_forward(model, input_downsampled))
             if i != (num_D-1):
                 input_downsampled = self.downsample(input_downsampled)
@@ -576,7 +570,7 @@ class NLayerDiscriminator(nn.Module):
         sequence = [[SN(nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),opt.use_SN), nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
-        for n in range(1, n_layers):
+        for _ in range(1, n_layers):
             nf_prev = nf
             nf = min(nf * 2, 512)
             sequence += [[
@@ -599,22 +593,21 @@ class NLayerDiscriminator(nn.Module):
 
         if getIntermFeat:
             for n in range(len(sequence)):
-                setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+                setattr(self, f'model{str(n)}', nn.Sequential(*sequence[n]))
         else:
             sequence_stream = []
-            for n in range(len(sequence)):
-                sequence_stream += sequence[n]
+            for item in sequence:
+                sequence_stream += item
             self.model = nn.Sequential(*sequence_stream)
 
     def forward(self, input):
-        if self.getIntermFeat:
-            res = [input]
-            for n in range(self.n_layers+2):
-                model = getattr(self, 'model'+str(n))
-                res.append(model(res[-1]))
-            return res[1:]
-        else:
+        if not self.getIntermFeat:
             return self.model(input)
+        res = [input]
+        for n in range(self.n_layers+2):
+            model = getattr(self, f'model{str(n)}')
+            res.append(model(res[-1]))
+        return res[1:]
 
 
 
@@ -650,17 +643,16 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
         norm_layer = get_norm_layer(norm_type="instance")
         activation = nn.ReLU(True)
 
-        model = []
-        for i in range(1):
-            model += [
-                ResnetBlock(
-                    inter_channels,
-                    padding_type="reflect",
-                    activation=activation,
-                    norm_layer=norm_layer,
-                    opt=None,
-                )
-            ]
+        model = [
+            ResnetBlock(
+                inter_channels,
+                padding_type="reflect",
+                activation=activation,
+                norm_layer=norm_layer,
+                opt=None,
+            )
+            for _ in range(1)
+        ]
         self.res_block = nn.Sequential(*model)
 
     def Hard_Compose(self, input, dim, index):
@@ -787,10 +779,7 @@ class GANLoss(nn.Module):
         self.real_label_var = None
         self.fake_label_var = None
         self.Tensor = tensor
-        if use_lsgan:
-            self.loss = nn.MSELoss()
-        else:
-            self.loss = nn.BCELoss()
+        self.loss = nn.MSELoss() if use_lsgan else nn.BCELoss()
 
     def get_target_tensor(self, input, target_is_real):
         target_tensor = None
@@ -800,15 +789,14 @@ class GANLoss(nn.Module):
             if create_label:
                 real_tensor = self.Tensor(input.size()).fill_(self.real_label)
                 self.real_label_var = Variable(real_tensor, requires_grad=False)
-            target_tensor = self.real_label_var
+            return self.real_label_var
         else:
             create_label = ((self.fake_label_var is None) or
                             (self.fake_label_var.numel() != input.numel()))
             if create_label:
                 fake_tensor = self.Tensor(input.size()).fill_(self.fake_label)
                 self.fake_label_var = Variable(fake_tensor, requires_grad=False)
-            target_tensor = self.fake_label_var
-        return target_tensor
+            return self.fake_label_var
 
     def __call__(self, input, target_is_real):
         if isinstance(input[0], list):
@@ -857,8 +845,7 @@ class VGG19_torch(torch.nn.Module):
         h_relu3 = self.slice3(h_relu2)
         h_relu4 = self.slice4(h_relu3)
         h_relu5 = self.slice5(h_relu4)
-        out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
-        return out
+        return [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
 
 class VGGLoss_torch(nn.Module):
     def __init__(self, gpu_ids):
@@ -869,7 +856,7 @@ class VGGLoss_torch(nn.Module):
 
     def forward(self, x, y):
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
-        loss = 0
-        for i in range(len(x_vgg)):
-            loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
-        return loss
+        return sum(
+            self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
+            for i in range(len(x_vgg))
+        )

@@ -34,11 +34,10 @@ def copyconf(default_opt, **kwargs):
 # |imtype|: the desired type of the converted numpy array
 def tensor2im(image_tensor, imtype=np.uint8, normalize=True, tile=False):
     if isinstance(image_tensor, list):
-        image_numpy = []
-        for i in range(len(image_tensor)):
-            image_numpy.append(tensor2im(image_tensor[i], imtype, normalize))
-        return image_numpy
-
+        return [
+            tensor2im(image_tensor[i], imtype, normalize)
+            for i in range(len(image_tensor))
+        ]
     if image_tensor.dim() == 4:
         # transform each image in the batch
         images_np = []
@@ -46,10 +45,7 @@ def tensor2im(image_tensor, imtype=np.uint8, normalize=True, tile=False):
             one_image = image_tensor[b]
             one_image_np = tensor2im(one_image)
             images_np.append(one_image_np.reshape(1, *one_image_np.shape))
-        images_np = np.concatenate(images_np, axis=0)
-
-        return images_np
-
+        return np.concatenate(images_np, axis=0)
     if image_tensor.dim() == 2:
         image_tensor = image_tensor.unsqueeze(0)
     image_numpy = image_tensor.detach().cpu().float().numpy()
@@ -72,15 +68,7 @@ def tensor2label(label_tensor, n_label, imtype=np.uint8, tile=False):
             one_image = label_tensor[b]
             one_image_np = tensor2label(one_image, n_label, imtype)
             images_np.append(one_image_np.reshape(1, *one_image_np.shape))
-        images_np = np.concatenate(images_np, axis=0)
-        # if tile:
-        #     images_tiled = tile_images(images_np)
-        #     return images_tiled
-        # else:
-        #     images_np = images_np[0]
-        #     return images_np
-        return images_np
-
+        return np.concatenate(images_np, axis=0)
     if label_tensor.dim() == 1:
         return np.zeros((64, 64, 3), dtype=np.uint8)
     if n_label == 0:
@@ -90,8 +78,7 @@ def tensor2label(label_tensor, n_label, imtype=np.uint8, tile=False):
         label_tensor = label_tensor.max(0, keepdim=True)[1]
     label_tensor = Colorize(n_label)(label_tensor)
     label_numpy = np.transpose(label_tensor.numpy(), (1, 2, 0))
-    result = label_numpy.astype(imtype)
-    return result
+    return label_numpy.astype(imtype)
 
 
 def save_image(image_numpy, image_path, create_dir=False):
@@ -156,8 +143,7 @@ def find_class_in_module(target_cls_name, module):
 
     if cls is None:
         print(
-            "In %s, there should be a class whose name matches %s in lowercase without underscore(_)"
-            % (module, target_cls_name)
+            f"In {module}, there should be a class whose name matches {target_cls_name} in lowercase without underscore(_)"
         )
         exit(0)
 
@@ -165,7 +151,7 @@ def find_class_in_module(target_cls_name, module):
 
 
 def save_network(net, label, epoch, opt):
-    save_filename = "%s_net_%s.pth" % (epoch, label)
+    save_filename = f"{epoch}_net_{label}.pth"
     save_path = os.path.join(opt.checkpoints_dir, opt.name, save_filename)
     torch.save(net.cpu().state_dict(), save_path)
     if len(opt.gpu_ids) and torch.cuda.is_available():
@@ -173,7 +159,7 @@ def save_network(net, label, epoch, opt):
 
 
 def load_network(net, label, epoch, opt):
-    save_filename = "%s_net_%s.pth" % (epoch, label)
+    save_filename = f"{epoch}_net_{label}.pth"
     save_dir = os.path.join(opt.checkpoints_dir, opt.name)
     save_path = os.path.join(save_dir, save_filename)
     if os.path.exists(save_path):
@@ -201,7 +187,7 @@ class Colorize(object):
         size = gray_image.size()
         color_image = torch.ByteTensor(3, size[1], size[2]).fill_(0)
 
-        for label in range(0, len(self.cmap)):
+        for label in range(len(self.cmap)):
             mask = (label == gray_image[0]).cpu()
             color_image[0][mask] = self.cmap[label][0]
             color_image[1][mask] = self.cmap[label][1]

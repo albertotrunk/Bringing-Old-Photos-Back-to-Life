@@ -17,7 +17,7 @@ def is_image_file(filename):
 
 def make_dataset(dir):
     images = []
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    assert os.path.isdir(dir), f'{dir} is not a valid directory'
 
     for root, _, fnames in sorted(os.walk(dir)):
         for fname in fnames:
@@ -40,7 +40,7 @@ if os.path.exists(out_dir) is False:
 #
 for target_folder in target_folders:
     curr_indir = os.path.join(indir, target_folder)
-    curr_out_file = os.path.join(os.path.join(out_dir, '%s.bigfile'%(target_folder)))
+    curr_out_file = os.path.join(os.path.join(out_dir, f'{target_folder}.bigfile'))
     image_lists = make_dataset(curr_indir)
     image_lists.sort()
     with open(curr_out_file, 'wb') as wfid:

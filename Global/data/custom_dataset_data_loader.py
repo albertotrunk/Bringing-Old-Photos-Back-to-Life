@@ -9,14 +9,14 @@ from data import online_dataset_for_old_photos as dts_ray_bigfile
 
 def CreateDataset(opt):
     dataset = None
-    if opt.training_dataset=='domain_A' or opt.training_dataset=='domain_B':
+    if opt.training_dataset in ['domain_A', 'domain_B']:
         dataset = dts_ray_bigfile.UnPairOldPhotos_SR()
     if opt.training_dataset=='mapping':
         if opt.random_hole:
             dataset = dts_ray_bigfile.PairOldPhotos_with_hole()
         else:
             dataset = dts_ray_bigfile.PairOldPhotos()
-    print("dataset [%s] was created" % (dataset.name()))
+    print(f"dataset [{dataset.name()}] was created")
     dataset.initialize(opt)
     return dataset
 

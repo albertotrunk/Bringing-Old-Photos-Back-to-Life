@@ -52,16 +52,14 @@ class SPADEResnetBlock(nn.Module):
         dx = self.conv_0(self.actvn(self.norm_0(x, seg, degraded_image)))
         dx = self.conv_1(self.actvn(self.norm_1(dx, seg, degraded_image)))
 
-        out = x_s + dx
-
-        return out
+        return x_s + dx
 
     def shortcut(self, x, seg, degraded_image):
-        if self.learned_shortcut:
-            x_s = self.conv_s(self.norm_s(x, seg, degraded_image))
-        else:
-            x_s = x
-        return x_s
+        return (
+            self.conv_s(self.norm_s(x, seg, degraded_image))
+            if self.learned_shortcut
+            else x
+        )
 
     def actvn(self, x):
         return F.leaky_relu(x, 2e-1)
@@ -84,8 +82,7 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x):
         y = self.conv_block(x)
-        out = x + y
-        return out
+        return x + y
 
 
 # VGG architecter, used for the perceptual loss using a pretrained VGG network
@@ -118,8 +115,7 @@ class VGG19(torch.nn.Module):
         h_relu3 = self.slice3(h_relu2)
         h_relu4 = self.slice4(h_relu3)
         h_relu5 = self.slice5(h_relu4)
-        out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
-        return out
+        return [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
 
 
 class SPADEResnetBlock_non_spade(nn.Module):
@@ -158,16 +154,10 @@ class SPADEResnetBlock_non_spade(nn.Module):
         dx = self.conv_0(self.actvn(x))
         dx = self.conv_1(self.actvn(dx))
 
-        out = x_s + dx
-
-        return out
+        return x_s + dx
 
     def shortcut(self, x, seg, degraded_image):
-        if self.learned_shortcut:
-            x_s = self.conv_s(x)
-        else:
-            x_s = x
-        return x_s
+        return self.conv_s(x) if self.learned_shortcut else x
 
     def actvn(self, x):
         return F.leaky_relu(x, 2e-1)

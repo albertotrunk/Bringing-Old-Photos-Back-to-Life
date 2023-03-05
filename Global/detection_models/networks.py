@@ -127,8 +127,12 @@ class UNetConvBlock(nn.Module):
         block = []
 
         for _ in range(conv_num):
-            block.append(nn.ReflectionPad2d(padding=int(padding)))
-            block.append(nn.Conv2d(in_size, out_size, kernel_size=3, padding=0))
+            block.extend(
+                (
+                    nn.ReflectionPad2d(padding=int(padding)),
+                    nn.Conv2d(in_size, out_size, kernel_size=3, padding=0),
+                )
+            )
             if batch_norm:
                 block.append(nn.BatchNorm2d(out_size))
             block.append(nn.LeakyReLU(0.2, True))
@@ -137,8 +141,7 @@ class UNetConvBlock(nn.Module):
         self.block = nn.Sequential(*block)
 
     def forward(self, x):
-        out = self.block(x)
-        return out
+        return self.block(x)
 
 
 class UNetUpBlock(nn.Module):
@@ -197,7 +200,7 @@ class UnetGenerator(nn.Module):
         unet_block = UnetSkipConnectionBlock(
             ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer, innermost=True
         )  # add the innermost layer
-        for i in range(num_downs - 5):  # add intermediate layers with ngf * 8 filters
+        for _ in range(num_downs - 5):
             unet_block = UnetSkipConnectionBlock(
                 ngf * 8,
                 ngf * 8,
@@ -289,10 +292,7 @@ class UnetSkipConnectionBlock(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
-        if self.outermost:
-            return self.model(x)
-        else:  # add skip connections
-            return torch.cat([x, self.model(x)], 1)
+        return self.model(x) if self.outermost else torch.cat([x, self.model(x)], 1)
 
 
 # ============================================

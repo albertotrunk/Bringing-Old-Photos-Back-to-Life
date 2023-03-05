@@ -48,12 +48,9 @@ class Visualizer:
     # |visuals|: dictionary of images to display or save
     def display_current_results(self, visuals, epoch, step):
 
-        all_tensor = []
         if self.tensorboard_log:
 
-            for key, tensor in visuals.items():
-                all_tensor.append((tensor.data.cpu() + 1) / 2)
-
+            all_tensor = [(tensor.data.cpu() + 1) / 2 for key, tensor in visuals.items()]
             output = torch.cat(all_tensor, 0)
             img_grid = vutils.make_grid(output, nrow=self.opt.batchSize, padding=0, normalize=False)
 
@@ -62,7 +59,7 @@ class Visualizer:
             else:
                 vutils.save_image(
                     output,
-                    os.path.join(self.log_dir, str(step) + ".png"),
+                    os.path.join(self.log_dir, f"{str(step)}.png"),
                     nrow=self.opt.batchSize,
                     padding=0,
                     normalize=False,
@@ -103,7 +100,7 @@ class Visualizer:
     def convert_visuals_to_numpy(self, visuals):
         for key, t in visuals.items():
             tile = self.opt.batchSize > 8
-            if "input_label" == key:
+            if key == "input_label":
                 t = util.tensor2label(t, self.opt.label_nc + 2, tile=tile)  ## B*H*W*C 0-255 numpy
             else:
                 t = util.tensor2im(t, tile=tile)
@@ -124,7 +121,7 @@ class Visualizer:
         links = []
 
         for label, image_numpy in visuals.items():
-            image_name = os.path.join(label, "%s.png" % (name))
+            image_name = os.path.join(label, f"{name}.png")
             save_path = os.path.join(image_dir, image_name)
             util.save_image(image_numpy, save_path, create_dir=True)
 

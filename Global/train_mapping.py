@@ -47,16 +47,10 @@ model = Pix2PixHDModel_Mapping()
 model.initialize(opt)
 
 path = os.path.join(opt.checkpoints_dir, opt.name, 'model.txt')
-fd = open(path, 'w')
-
-if opt.use_skip_model:
+with open(path, 'w') as fd:
+    if not opt.use_skip_model:
+        fd.write(str(model.netG_A))
     fd.write(str(model.mapping_net))
-    fd.close()
-else:
-    fd.write(str(model.netG_A))
-    fd.write(str(model.mapping_net))
-    fd.close()
-
 if opt.isTrain and len(opt.gpu_ids) > 1:
     model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
 
@@ -86,9 +80,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         #print(pair)
         losses, generated = model(Variable(data['label']), Variable(data['inst']), 
             Variable(data['image']), Variable(data['feat']), infer=save_fake)
-        
+
         # sum per device losses
-        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
+        losses = [x if isinstance(x, int) else torch.mean(x) for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
         # calculate final loss scalar
@@ -110,7 +104,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         ############## Display results and errors ##########
         ### print out errors
         if i == 0 or total_steps % opt.print_freq == print_delta:
-            errors = {k: v.data if not isinstance(v, int) else v for k, v in loss_dict.items()}
+            errors = {k: v if isinstance(v, int) else v.data for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
             visualizer.print_current_errors(epoch, epoch_iter, errors, t,model.module.old_lr)
             visualizer.plot_current_errors(errors, total_steps)
@@ -139,7 +133,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         if epoch_iter >= dataset_size:
             break
-       
+
     # end of epoch
     epoch_e_t=datetime.datetime.now()
     iter_end_time = time.time()
